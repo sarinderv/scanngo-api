@@ -38,11 +38,11 @@ func New(rtr *mux.Router, lgr zerolog.Logger, db *sqlx.DB) *Server {
 
 func (s *Server) InstantiateServices() {
 	clientService := service.NewClientService(s.DB)
-	//userService := service.NewUserService(s.DB)
+	productService := service.NewProductService(s.DB)
 
 	controllers := []controllers.IController{
 		controllers.NewClientController(s.DB, clientService, s.Logger),
-		//controllers.NewUserController(s.DB, userService),
+		controllers.NewProductController(s.DB, productService, s.Logger),
 	}
 
 	for _, c := range controllers {
