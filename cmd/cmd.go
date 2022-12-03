@@ -44,7 +44,7 @@ func Run(args []string) (err error) {
 	router := mux.NewRouter()
 
 	s := server.New(router, logger, db)
-	router.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		// an example API handler
 		json.NewEncoder(w).Encode(map[string]bool{"ok": true})
 	})

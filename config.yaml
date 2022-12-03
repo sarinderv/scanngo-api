@@ -3,4 +3,4 @@ database:
   db_name: scanngodb
   db_host: localhost
   db_user: root
-  db_passowrd: ******
+  db_passowrd:

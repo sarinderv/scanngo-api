@@ -1,59 +1,72 @@
 package service
 
-import (
-	"context"
-	"testing"
+// import (
+// 	"context"
+// 	"fmt"
+// 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-)
+// 	"github.com/jmoiron/sqlx"
+// 	"github.com/stretchr/testify/assert"
+// 	"github.com/stretchr/testify/require"
+// )
 
-func TestClientCreate(t *testing.T) {
+// var db *sqlx.DB
 
-	store := &ClientService{
-		db: db,
-	}
-	tx = db.Begin()
-	b, err := store.Create(context.TODO(), &Client{
-		Name:  "some Client",
-		Adderss: "some address",
-	})
+// func TestClientCreate(t *testing.T) {
+// 	db , er : = sqlx.Connect("mysql", fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8&parseTime=True&loc=Local", "a", "b", "c", "d"))
+// 	if err != nil {
+// 		log.Error().Msg(err.Error())
+// 		return nil, err
+// 	}
 
-	require.NoError(t, err)
-	assert.NotZero(t, b.ID)
-}
+// 	db.Close()
+// 	store := &clientService{
+// 		db: db,
+// 	}
+// 	tx := db.MustBegin()
 
-func TestClientBulkCreate(t *testing.T) {
+// 	b, err := store.Create(context.TODO(), tx, &Client{
+// 		Name:    "some Client",
+// 		Address: "some address",
+// 	})
 
-	store := &ClientService{
-		db: db,
-	}
-	tx = db.Begin()
-	err := store.BulkCreate(context.TODO(),[]{ &Client{
-		Name:  "some Client",
-		Adderss: "some otheraddress",,
-	},
-	&Client{
-		Name:  "some other Client",
-		Adderss: "some random address",
-	}
-})
+// 	require.NoError(t, err)
+// 	assert.NotZero(t, b.ID)
+// }
 
-	require.NoError(t, err)
-}
+// func TestClientBulkCreate(t *testing.T) {
 
-func TestClientGet(t *testing.T) {
+// 	store := &clientService{
+// 		db: db,
+// 	}
+// 	tx = db.Begin()
+// 	err := store.BulkCreate(context.TODO(), []*Client{
+// 		&Client{
+// 			Name:    "some Client",
+// 			Adderss: "some otheraddress",
+// 		},
+// 		&Client{
+// 			Name:    "some other Client",
+// 			Adderss: "some random address",
+// 		},
+// 	})
 
-	store := &ClientService{
-		db: db,
-	}
-	tx = db.Begin()
+// 	require.NoError(t, err)
+// }
 
-	id := 2
-	b, err := store.Find(context.TODO(), 2)
+// func TestClientGet(t *testing.T) {
+// 	db, err = sqlx.Connect("mysql", fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8&parseTime=True&loc=Local", "a", "b", "c", "d"))
 
-	require.NoError(t, err)
-	
-	assert.equals(b.Name, "that Client")
-	assert.equals(b.Address, "this address")
-}
+// 	store := &ClientService{
+// 		db: db,
+// 	}
+// 	tx = db.Begin()
+
+// 	id := 2
+// 	b, err := store.Find(context.TODO(), 2)
+
+// 	require.NoError(t, err)
+
+// 	assert.equals(b.Name, "that Client")
+// 	assert.equals(b.Address, "this address")
+// }
