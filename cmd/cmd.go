@@ -50,7 +50,7 @@ func Run(args []string) (err error) {
 	})
 
 	router.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
-		httpSwagger.URL("http://localhost:8080/swagger/doc.json"), //The url pointing to API definition
+		httpSwagger.URL("/swagger/doc.json"), //The url pointing to API definition
 	)).Methods(http.MethodGet)
 
 	return s.Driver.ListenAndServe()
