@@ -17,7 +17,7 @@ jobs:
       run: |
         touch config.yaml
         echo "database:" >> config.yaml
-        echo "  db_port: ${{ secrets.PORT }}" >> config.yaml
+        echo "  db_port: ${{ secrets.DB_PORT }}" >> config.yaml
         echo "  db_name: ${{ secrets.DB_NAME }}" >> config.yaml
         echo "  db_host: ${{ secrets.DB_HOST }}" >> config.yaml
         echo "  db_user: ${{ secrets.DB_USER }}" >> config.yaml
@@ -35,6 +35,6 @@ jobs:
         # AWS Account ID
         account_id: ${{ secrets.AWS_ACCOUNT_ID }}
         # Name of your ECR repository
-        repo: ${{ secrets.REPO_NAME }}
+        repo: ${{ secrets.ECR_REPO_NAME }}
         # The AWS region
         region: us-east-1
