@@ -3,7 +3,8 @@ name: ScanNgo-api-build-deploy-pipeline
 on:
   release:
     types: [published]
-
+  workflow_dispatch:
+  
 jobs:
 
   build:
