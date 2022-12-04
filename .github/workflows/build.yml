@@ -22,7 +22,7 @@ jobs:
         echo "  db_name: ${{ secrets.DB_NAME }}" >> config.yaml
         echo "  db_host: ${{ secrets.DB_HOST }}" >> config.yaml
         echo "  db_user: ${{ secrets.DB_USER }}" >> config.yaml
-        echo "  db_passowrd: ${{ secrets.DB_PASWORD }}" >> config.yaml
+        echo "  db_password: ${{ secrets.DB_PASWORD }}" >> config.yaml
         
 #     - name: AWS ECR - Build Docker and Push to ECR
 #       # You may pin to the exact commit or the version.
