@@ -38,4 +38,4 @@ jobs:
         # Name of your ECR repository
         repo: ${{ secrets.ECR_REPO_NAME }}
         # The AWS region
-        region: us-east-1
+        region: us-west-2
