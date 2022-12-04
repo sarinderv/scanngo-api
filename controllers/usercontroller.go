@@ -7,7 +7,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
-	"github.com/scanngo-api/service"
+	"github.com/runntimeterror/scanngo-api/service"
 )
 
 type userController struct {

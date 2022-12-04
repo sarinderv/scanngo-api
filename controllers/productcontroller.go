@@ -10,7 +10,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/hlog"
-	"github.com/scanngo-api/errs"
+	"github.com/runntimeterror/scanngo-api/errs"
 )
 
 type ProductController struct {

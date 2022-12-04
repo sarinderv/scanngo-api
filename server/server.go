@@ -9,8 +9,8 @@ import (
 	"github.com/justinas/alice"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/hlog"
-	"github.com/scanngo-api/controllers"
-	"github.com/scanngo-api/service"
+	"github.com/runntimeterror/scanngo-api/controllers"
+	"github.com/runntimeterror/scanngo-api/service"
 )
 
 type Server struct {

@@ -11,9 +11,9 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/jmoiron/sqlx"
 	"github.com/rs/zerolog"
-	"github.com/scanngo-api/config"
-	_ "github.com/scanngo-api/docs"
-	"github.com/scanngo-api/server"
+	"github.com/runntimeterror/scanngo-api/config"
+	_ "github.com/runntimeterror/scanngo-api/docs"
+	"github.com/runntimeterror/scanngo-api/server"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 

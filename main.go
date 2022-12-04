@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/scanngo-api/cmd"
+	"github.com/runntimeterror/scanngo-api/cmd"
 )
 
 // @title           ScanNgo API
