@@ -23,7 +23,7 @@ type Server struct {
 func New(rtr *mux.Router, lgr zerolog.Logger, db *sqlx.DB) *Server {
 
 	driver := http.Server{
-		Addr:         "127.0.0.1:8080",
+		Addr:         "0.0.0.0:8080",
 		Handler:      rtr,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,

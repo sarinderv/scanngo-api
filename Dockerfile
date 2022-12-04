@@ -1,11 +1,11 @@
 # Build Stage
 # First pull Golang image
 FROM golang:1.19.3-alpine
-ENV APP_NAME=APP
+ENV APP_NAME=scanngo-api
 ENV CMD_PATH=main.go
 ENV GOOS linux
 
-WORKDIR "/$APP_NAME"
+WORKDIR "/APP"
 
 # Copyapplication data into image
 COPY . ./
@@ -14,10 +14,10 @@ RUN ls -la
 
 RUN go mod download
 
-RUN  go build -o main.go
+RUN  go build -o /
 
 # Expose application port
-EXPOSE 8080
+EXPOSE 8080/tcp
 
 # Start app 
-CMD ./$APP_NAME
+CMD /scanngo-api
