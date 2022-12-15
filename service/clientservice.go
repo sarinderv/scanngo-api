@@ -18,7 +18,7 @@ type Client struct {
 	Primary_Contact  string       `json:"primaryContact" db:"primary_contact"`
 	DeactivationDate sql.NullTime `json:"deactivationDate" db:"deactivationDate"`
 	Client_image     string       `json:"clientImage" db:"client_image"`
-	Logo_url         string       `json:"logo_url" db:"logo_url"`
+	Logo_url         string       `json:"logoUrl" db:"logo_url"`
 	Insert_Timestamp sql.NullTime `json:"ins_ts" db:"ins_ts"`
 	Update_Timestamp sql.NullTime `json:"upd_ts" db:"upd_ts"`
 }
@@ -44,7 +44,7 @@ func NewClientService(db *sqlx.DB) IClientService {
 func (s *clientService) Create(ctx context.Context, tx *sqlx.Tx, r *Client) (*Client, error) {
 	log.Info().Msg("Inserting record into client")
 
-	rs, err := sqlx.NamedExec(tx, "INSERT INTO client (name, address, active,client_image, logo_url, primary_contact) VALUES (:name, :address, :active, :client_image, :logo_url , :primary_contact)", r)
+	rs, err := sqlx.NamedExec(tx, "INSERT INTO client (name, address, active, client_image, logo_url, primary_contact) VALUES (:name, :address, :active, :client_image, :logo_url , :primary_contact)", r)
 
 	if err != nil {
 		log.Error().Msg(err.Error())
