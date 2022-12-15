@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -31,36 +32,37 @@ func New(rtr *mux.Router, lgr zerolog.Logger, db *sqlx.DB) *Server {
 	}
 
 	s := &Server{rtr, lgr, &driver, db}
-	rtr.Use(s.jsonContentTypeResponseHandler)
+
 	s.InstantiateServices()
 	return s
 }
 
 func (s *Server) InstantiateServices() {
 	clientService := service.NewClientService(s.DB)
+	productService := service.NewProductService(s.DB, s.Logger)
 
 	controllers := []controllers.IController{
 		controllers.NewClientController(s.DB, clientService, s.Logger),
+		controllers.NewProductController(s.DB, productService, s.Logger),
 	}
 
 	for _, c := range controllers {
 		subRouter := s.router.PathPrefix(c.GetPath()).Subrouter()
 
 		for _, r := range c.GetRoutes() {
-
+			s.Logger.Info().Msg(fmt.Sprintf("Instantiating route -> %s : %s", c.GetPath()+r.Path, r.Method))
 			subRouter.Handle(r.Path,
 				s.loggerChain().
 					Append(s.jsonContentTypeResponseHandler).
 					Then(r.Handler)).
 				Methods(r.Method)
 
-			if r.Method == http.MethodPost || r.Method == http.MethodPut {
-				subRouter.Headers(contentTypeHeaderKey, appJSONContentTypeHeaderVal)
-			}
+			// if r.Method == http.MethodPost || r.Method == http.MethodPut {
+			// 	subRouter.Headers(contentTypeHeaderKey, appJSONContentTypeHeaderVal)
+			// }
 		}
 
 	}
-
 }
 
 func (s *Server) jsonContentTypeResponseHandler(h http.Handler) http.Handler {

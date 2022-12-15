@@ -1,57 +1,65 @@
 package controllers
 
 import (
+	"database/sql"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/hlog"
 	"github.com/runntimeterror/scanngo-api/errs"
+	"github.com/runntimeterror/scanngo-api/service"
 )
 
 type ProductController struct {
 	PathPrefix string
 	Logger     zerolog.Logger
 	db         *sqlx.DB
-	// service    service.IProductService
+	service    service.IProductService
 }
 
-func NewProductController(db *sqlx.DB, lgr zerolog.Logger) *ProductController {
+func NewProductController(db *sqlx.DB, productService service.IProductService, lgr zerolog.Logger) *ProductController {
 	return &ProductController{
-		"/Product",
+		"/product",
 		lgr,
 		db,
+		productService,
 	}
 }
 
 func (s *ProductController) GetRoutes() []Route {
 	routes := []Route{
 		{
-			Path:    "",
+			Path:    "/search/{clientId}",
+			Handler: s.handleProductSearch,
+			Method:  http.MethodGet,
+		},
+		{
+			Path:    "/{clientId}",
 			Handler: s.handleProductCreate,
 			Method:  http.MethodPost,
 		},
 		{
-			Path:    "",
+			Path:    "/{clientId}/{id}",
 			Handler: s.handleProductUpdate,
 			Method:  http.MethodPut,
 		},
 		{
-			Path:    "/{id}",
+			Path:    "/{clientId}/{id}",
 			Handler: s.handleProductDelete,
 			Method:  http.MethodDelete,
 		},
 		{
-			Path:    "",
+			Path:    "/{clientId}",
 			Handler: s.handleProductGetAll,
 			Method:  http.MethodGet,
 		},
 		{
-			Path:    "/{id}",
+			Path:    "/{clientId}/{id}",
 			Handler: s.handleProductGet,
 			Method:  http.MethodGet,
 		},
@@ -80,14 +88,39 @@ func (s *ProductController) GetPath() string {
 func (s *ProductController) handleProductGet(w http.ResponseWriter, r *http.Request) {
 	lgr := *hlog.FromRequest(r)
 	vars := mux.Vars(r)
-	rawCid := vars["id"]
+	rawCid := vars["clientId"]
 
-	ProductID, err := strconv.Atoi(rawCid)
-	if ProductID < 2 {
+	rawPid := vars["id"]
+
+	if rawCid == "search" {
+		s.handleProductSearch(w, r)
+		return
+	}
+
+	clientID, err := strconv.Atoi(rawCid)
+	if err != nil {
+		errs.HTTPErrorResponse(w, lgr, errs.Error{
+			StatusCode: 400,
+			Err:        err,
+		})
+		return
+	}
+
+	if clientID < 1 {
 
 		errs.HTTPErrorResponse(w, lgr, errs.Error{
 			StatusCode: 400,
-			Err:        errors.New("Bad Product id"),
+			Err:        errors.New("bad client id"),
+		})
+		return
+	}
+
+	productID, err := strconv.Atoi(rawPid)
+	if productID < 1 {
+
+		errs.HTTPErrorResponse(w, lgr, errs.Error{
+			StatusCode: 400,
+			Err:        errors.New("bad product id"),
 		})
 		return
 	}
@@ -99,7 +132,8 @@ func (s *ProductController) handleProductGet(w http.ResponseWriter, r *http.Requ
 		})
 		return
 	}
-	var Product []int
+
+	product, err := s.service.FindByID(r.Context(), productID, clientID)
 	if err != nil {
 		if err.Error() == "sql: no rows in result set" {
 			errs.HTTPErrorResponse(w, lgr, errs.Error{
@@ -113,7 +147,63 @@ func (s *ProductController) handleProductGet(w http.ResponseWriter, r *http.Requ
 		})
 		return
 	}
-	json.NewEncoder(w).Encode(Product)
+
+	json.NewEncoder(w).Encode(product)
+}
+
+// ProductSearch godoc
+// @Summary      ProductSearch
+// @Description  ProductSearch
+// @Tags         Product
+// @Accept       json
+// @Produce      json
+// @Param        name   query      string  true  "Product Name"
+// @Failure      404  {string} string
+// @Success      200  {string} string
+// @Failure      400  {string} string
+// @Failure      500  {string} string
+// @Router       /Product/{id} [get]
+func (s *ProductController) handleProductSearch(w http.ResponseWriter, r *http.Request) {
+	lgr := *hlog.FromRequest(r)
+
+	search := r.URL.Query().Get("code")
+	vars := mux.Vars(r)
+	rawCid := vars["clientId"]
+	clientID, err := strconv.Atoi(rawCid)
+	if err != nil {
+		errs.HTTPErrorResponse(w, lgr, errs.Error{
+			StatusCode: 400,
+			Err:        err,
+		})
+		return
+	}
+
+	if clientID < 1 {
+
+		errs.HTTPErrorResponse(w, lgr, errs.Error{
+			StatusCode: 400,
+			Err:        errors.New("bad client id"),
+		})
+		return
+	}
+
+	products, err := s.service.FindByName(r.Context(), search, clientID)
+
+	if err != nil {
+		if err.Error() == "sql: no rows in result set" {
+			errs.HTTPErrorResponse(w, lgr, errs.Error{
+				StatusCode: 404,
+				Err:        err,
+			})
+			return
+		}
+		errs.HTTPErrorResponse(w, lgr, errs.Error{
+			StatusCode: 500, Err: err,
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(products)
 }
 
 // ProductGetAll godoc
@@ -128,11 +218,37 @@ func (s *ProductController) handleProductGet(w http.ResponseWriter, r *http.Requ
 // @Failure      500  {string} string
 // @Router       /Product [get]
 func (s *ProductController) handleProductGetAll(w http.ResponseWriter, r *http.Request) {
-	// lgr := *hlog.FromRequest(r)
+	lgr := *hlog.FromRequest(r)
+	vars := mux.Vars(r)
+	rawCid := vars["clientId"]
 
-	var Products []int
+	clientID, err := strconv.Atoi(rawCid)
+	if err != nil {
+		errs.HTTPErrorResponse(w, lgr, errs.Error{
+			StatusCode: 400,
+			Err:        err,
+		})
+		return
+	}
 
-	json.NewEncoder(w).Encode(Products)
+	if clientID < 1 {
+
+		errs.HTTPErrorResponse(w, lgr, errs.Error{
+			StatusCode: 400,
+			Err:        errors.New("bad client id"),
+		})
+		return
+	}
+
+	products, err := s.service.FindAll(r.Context(), clientID)
+	if err != nil {
+		errs.HTTPErrorResponse(w, lgr, errs.Error{
+			StatusCode: 500,
+			Err:        err,
+		})
+	}
+
+	json.NewEncoder(w).Encode(products)
 }
 
 // ProductCreate godoc
@@ -147,45 +263,52 @@ func (s *ProductController) handleProductGetAll(w http.ResponseWriter, r *http.R
 // @Failure      500  {string} string
 // @Router       /Product [post]
 func (s *ProductController) handleProductCreate(w http.ResponseWriter, r *http.Request) {
-	// lgr := *hlog.FromRequest(r)
+	lgr := *hlog.FromRequest(r)
 
-	// rb := service.Product{}
+	rb := []*service.Product{}
 	// err := json.NewDecoder(r.Body).Decode(&rb)
 	// defer r.Body.Close()
+	err := json.NewDecoder(r.Body).Decode(&rb)
+	defer r.Body.Close()
 
-	// if err != nil {
-	// 	errs.HTTPErrorResponse(w, lgr, errs.Error{
-	// 		StatusCode: 400,
-	// 		Err:        err,
-	// 	})
-	// 	return
-	// }
+	if err != nil {
+		errs.HTTPErrorResponse(w, lgr, errs.Error{
+			StatusCode: 400,
+			Err:        err,
+		})
+		return
+	}
 
-	// tx := s.db.MustBegin()
-	// if err != nil {
-	// 	errs.HTTPErrorResponse(w, lgr, errs.Error{
-	// 		StatusCode: 500,
-	// 		Err:        err,
-	// 	})
-	// 	return
-	// }
+	tx := s.db.MustBegin()
+	if err != nil {
+		errs.HTTPErrorResponse(w, lgr, errs.Error{
+			StatusCode: 500,
+			Err:        err,
+		})
+		return
+	}
 
-	// // Enrich input
-	// rb.Insert_User = 1
+	err = s.service.Create(r.Context(), tx, rb)
+	if err != nil {
+		tx.Rollback()
+		errs.HTTPErrorResponse(w, lgr, errs.Error{
+			StatusCode: 500,
+			Err:        err,
+		})
+		return
+	}
+	if err != nil {
+		tx.Rollback()
+		errs.HTTPErrorResponse(w, lgr, errs.Error{
+			StatusCode: 500,
+			Err:        err,
+		})
+		return
+	}
 
-	// clnt, err := s.service.Create(r.Context(), tx, &rb)
-	// if err != nil {
-	// 	tx.Rollback()
-	// 	errs.HTTPErrorResponse(w, lgr, errs.Error{
-	// 		StatusCode: 500,
-	// 		Err:        err,
-	// 	})
-	// 	return
-	// }
+	tx.Commit()
 
-	// tx.Commit()
-
-	json.NewEncoder(w).Encode("clnt")
+	json.NewEncoder(w).Encode("success")
 }
 
 // ProductUpdate godoc
@@ -200,46 +323,94 @@ func (s *ProductController) handleProductCreate(w http.ResponseWriter, r *http.R
 // @Failure      500  {string} string
 // @Router       /Product [put]
 func (s *ProductController) handleProductUpdate(w http.ResponseWriter, r *http.Request) {
-	// lgr := *hlog.FromRequest(r)
+	lgr := *hlog.FromRequest(r)
 
-	// rb := service.Product{}
-	// err := json.NewDecoder(r.Body).Decode(&rb)
-	// defer r.Body.Close()
+	vars := mux.Vars(r)
 
-	// if err != nil {
-	// 	errs.HTTPErrorResponse(w, lgr, errs.Error{
-	// 		StatusCode: 400,
-	// 		Err:        err,
-	// 	})
-	// 	return
-	// }
+	rb := service.Product{}
+	err := json.NewDecoder(r.Body).Decode(&rb)
+	defer r.Body.Close()
 
-	// tx := s.db.MustBegin()
-	// if err != nil {
-	// 	errs.HTTPErrorResponse(w, lgr, errs.Error{
-	// 		StatusCode: 500,
-	// 		Err:        err,
-	// 	})
-	// 	return
-	// }
+	if err != nil {
+		errs.HTTPErrorResponse(w, lgr, errs.Error{
+			StatusCode: 400,
+			Err:        err,
+		})
+		return
+	}
 
-	// // Enrich input
-	// if !rb.Active {
-	// 	rb.DeactivationDate = sql.NullTime{time.Now(), true}
-	// }
-	// rb.Update_User = sql.NullInt32{1, true}
+	rawCid := vars["clientId"]
 
-	// err = s.service.Update(r.Context(), tx, &rb)
-	// if err != nil {
-	// 	tx.Rollback()
-	// 	errs.HTTPErrorResponse(w, lgr, errs.Error{
-	// 		StatusCode: 500,
-	// 		Err:        err,
-	// 	})
-	// 	return
-	// }
+	rawPid := vars["id"]
 
-	// tx.Commit()
+	clientID, err := strconv.Atoi(rawCid)
+	if err != nil {
+		errs.HTTPErrorResponse(w, lgr, errs.Error{
+			StatusCode: 400,
+			Err:        err,
+		})
+		return
+	}
+
+	if clientID < 1 {
+
+		errs.HTTPErrorResponse(w, lgr, errs.Error{
+			StatusCode: 400,
+			Err:        errors.New("bad client id"),
+		})
+		return
+	}
+
+	productID, err := strconv.Atoi(rawPid)
+	if productID < 1 {
+
+		errs.HTTPErrorResponse(w, lgr, errs.Error{
+			StatusCode: 400,
+			Err:        errors.New("bad product id"),
+		})
+		return
+	}
+
+	a := &sql.TxOptions{}
+
+	tx, err := s.db.BeginTxx(r.Context(), a)
+	if err != nil {
+		errs.HTTPErrorResponse(w, lgr, errs.Error{
+			StatusCode: 500,
+			Err:        errors.Wrap(err, "failed to start transaction"),
+		})
+		return
+	}
+
+	if err != nil {
+		errs.HTTPErrorResponse(w, lgr, errs.Error{
+			StatusCode: 500,
+			Err:        err,
+		})
+		return
+	}
+
+	s.Logger.Debug().Msg("Starting transaction")
+
+	err = s.service.Update(r.Context(), tx, &rb, clientID)
+	if err != nil {
+		tx.Rollback()
+		errs.HTTPErrorResponse(w, lgr, errs.Error{
+			StatusCode: 500,
+			Err:        err,
+		})
+		return
+	}
+
+	if err != nil {
+		errs.HTTPErrorResponse(w, lgr, errs.Error{
+			StatusCode: 500,
+			Err:        err,
+		})
+		return
+	}
+
+	tx.Commit()
 
 	json.NewEncoder(w).Encode(map[string]bool{"response": true})
 }
@@ -257,49 +428,48 @@ func (s *ProductController) handleProductUpdate(w http.ResponseWriter, r *http.R
 // @Failure      500  {string} string
 // @Router       /Product/{id} [delete]
 func (s *ProductController) handleProductDelete(w http.ResponseWriter, r *http.Request) {
-	// lgr := *hlog.FromRequest(r)
+	lgr := *hlog.FromRequest(r)
 
-	// vars := mux.Vars(r)
-	// rawCid := vars["id"]
+	vars := mux.Vars(r)
+	rawCid := vars["id"]
 
-	// ProductID, err := strconv.Atoi(rawCid)
-	// if ProductID < 2 {
+	productID, err := strconv.Atoi(rawCid)
+	if productID < 2 {
 
-	// 	errs.HTTPErrorResponse(w, lgr, errs.Error{
-	// 		StatusCode: 400,
-	// 		Err:        errors.New("Bad Product id"),
-	// 	})
-	// 	return
-	// }
+		errs.HTTPErrorResponse(w, lgr, errs.Error{
+			StatusCode: 400,
+			Err:        errors.New("Bad client id"),
+		})
+		return
+	}
 
-	// if err != nil {
+	if err != nil {
+		errs.HTTPErrorResponse(w, lgr, errs.Error{
+			StatusCode: 400,
+			Err:        err,
+		})
+		return
+	}
 
-	// 	errs.HTTPErrorResponse(w, lgr, errs.Error{
-	// 		StatusCode: 400,
-	// 		Err:        err,
-	// 	})
-	// 	return
-	// }
+	tx := s.db.MustBegin()
+	if err != nil {
+		errs.HTTPErrorResponse(w, lgr, errs.Error{
+			StatusCode: 500,
+			Err:        err,
+		})
+		return
+	}
 
-	// tx := s.db.MustBegin()
-	// if err != nil {
-	// 	errs.HTTPErrorResponse(w, lgr, errs.Error{
-	// 		StatusCode: 500,
-	// 		Err:        err,
-	// 	})
-	// 	return
-	// }
+	err = s.service.Delete(r.Context(), tx, productID)
+	if err != nil {
+		tx.Rollback()
+		errs.HTTPErrorResponse(w, lgr, errs.Error{
+			StatusCode: 500,
+			Err:        err,
+		})
+		return
+	}
 
-	// err = s.service.Delete(r.Context(), tx, ProductID)
-	// if err != nil {
-	// 	tx.Rollback()
-	// 	errs.HTTPErrorResponse(w, lgr, errs.Error{
-	// 		StatusCode: 500,
-	// 		Err:        err,
-	// 	})
-	// 	return
-	// }
-
-	// tx.Commit()
+	tx.Commit()
 	json.NewEncoder(w).Encode("success")
 }

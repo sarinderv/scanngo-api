@@ -15,9 +15,7 @@ type Error struct {
 func HTTPErrorResponse(w http.ResponseWriter, lgr zerolog.Logger, err Error) {
 
 	// log the error with stacktrace
-	lgr.Error().Stack().Err(err.Err).
-		Int("http_statuscode", err.StatusCode).
-		Msg("Error Response Sent")
+	lgr.Error().Stack().Err(err.Err).Msg("")
 
 	// Write Content-Type headers
 	w.Header().Set("Content-Type", "application/json")

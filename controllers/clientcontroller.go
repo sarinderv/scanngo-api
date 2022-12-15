@@ -193,9 +193,6 @@ func (s *ClientController) handleClientCreate(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Enrich input
-	rb.Insert_User = 1
-
 	clnt, err := s.service.Create(r.Context(), tx, &rb)
 	if err != nil {
 		tx.Rollback()
@@ -250,7 +247,6 @@ func (s *ClientController) handleClientUpdate(w http.ResponseWriter, r *http.Req
 	if !rb.Active {
 		rb.DeactivationDate = sql.NullTime{time.Now(), true}
 	}
-	rb.Update_User = sql.NullInt32{1, true}
 
 	err = s.service.Update(r.Context(), tx, &rb)
 	if err != nil {

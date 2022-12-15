@@ -1,118 +1,159 @@
 package service
 
-// import (
-// 	"context"
-// 	"database/sql"
-// 	"errors"
-// 	"fmt"
+import (
+	"context"
+	"database/sql"
+	"fmt"
 
-// 	"github.com/jmoiron/sqlx"
-// 	"github.com/rs/zerolog/log"
-// )
+	"github.com/jmoiron/sqlx"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+)
 
-// type Product struct {
-// 	ID               int           `json:"id" db:"id"`
-// 	Name             string        `json:"name" db:"name"`
-// 	Address          string        `json:"address" db:"address"`
-// 	Active           bool          `json:"active" db:"active"`
-// 	DeactivationDate sql.NullTime  `json:"deactivationDate" db:"deactivationDate"`
-// 	Insert_Timestamp sql.NullTime  `json:"ins_ts" db:"ins_ts"`
-// 	Update_Timestamp sql.NullTime  `json:"upd_ts" db:"upd_ts"`
-// 	Insert_User      int           `db:"ins_user"`
-// 	Update_User      sql.NullInt32 `db:"upd_user"`
-// }
+type Product struct {
+	ID               int          `json:"id" db:"id"`
+	Name             string       `json:"name" db:"name"`
+	Price            string       `json:"price" db:"price"`
+	Active           bool         `json:"active" db:"active"`
+	ClientID         int          `json:"clientId" db:"client_id"`
+	ImageUrl         string       `json:"imageUrl" db:"image_url"`
+	Insert_Timestamp sql.NullTime `json:"ins_ts" db:"ins_ts"`
+	Update_Timestamp sql.NullTime `json:"upd_ts" db:"upd_ts"`
+}
 
-// type IProductService interface {
-// 	BulkCreate(ctx context.Context, tx *sqlx.Tx, r []*Product) (error)
-// 	Create(ctx context.Context, tx *sqlx.Tx, r *Product) (*Product, error)
-// 	Update(ctx context.Context, tx *sqlx.Tx, r *Product) error
-// 	Delete(ctx context.Context, tx *sqlx.Tx, id int) error
-// 	FindAll(ctx context.Context) ([]*Product, error)
-// 	FindByID(ctx context.Context, id int) (*Product, error)
-// }
+type IProductService interface {
+	Create(ctx context.Context, tx *sqlx.Tx, r []*Product) error
+	Update(ctx context.Context, tx *sqlx.Tx, r *Product, clientID int) error
+	Delete(ctx context.Context, tx *sqlx.Tx, id int) error
+	FindAll(ctx context.Context, clientID int) ([]*Product, error)
+	FindByID(ctx context.Context, id int, clientID int) (*Product, error)
+	FindByName(ctx context.Context, name string, clientID int) ([]Product, error)
+}
 
-// type ProductService struct {
-// 	db *sqlx.DB
-// }
+type ProductService struct {
+	db  *sqlx.DB
+	log zerolog.Logger
+}
 
-// func NewProductService(db *sqlx.DB) IProductService {
-// 	return &ProductService{
-// 		db,
-// 	}
-// }
+func NewProductService(db *sqlx.DB, log zerolog.Logger) IProductService {
+	return &ProductService{
+		db,
+		log,
+	}
+}
 
-// func (s *ProductService) Create(ctx context.Context, tx *sqlx.Tx, r *Product) (*Product, error) {
-// 	log.Info().Msg("Inserting record into Product")
+func (s *ProductService) Create(ctx context.Context, tx *sqlx.Tx, r []*Product) error {
+	log.Info().Msg("Inserting record into inventory")
 
-// 	rs, err := sqlx.NamedExec(tx, "INSERT INTO Product (name, price, active , ins_user) VALUES (:name, :price, :active, :ins_user )", r)
+	rs, err := sqlx.NamedExec(tx, "INSERT INTO inventory (name, price, active, client_id, image_url) VALUES (:name, :price, :active, :client_id, :image_url )", r)
 
-// 	if err != nil {
-// 		log.Error().Msg(err.Error())
-// 		return nil, err
-// 	}
+	if err != nil {
+		return err
+	}
 
-// 	id, _ := rs.LastInsertId()
+	rows, err := rs.RowsAffected()
 
-// 	r.ID = int(id)
+	if rows < 1 {
+		if err != nil {
+			err := errors.New("no rows were inserted")
+			log.Error().Msg(err.Error())
+			return err
+		}
+	}
 
-// 	fmt.Println(rs)
+	return nil
+}
 
-// 	return r, nil
-// }
+func (s *ProductService) Update(ctx context.Context, tx *sqlx.Tx, r *Product, clientID int) error {
+	s.log.Debug().Msg("updating record into inventory")
 
-// func (s *ProductService) Update(ctx context.Context, tx *sqlx.Tx, r *Product) error {
-// 	log.Info().Msg("Inserting record into Product")
+	product, err := getProduct(s.log, tx, r.ID, clientID)
+	if err != nil {
+		return err
+	}
 
-// 	rs, err := sqlx.NamedExec(tx, "UPDATE Product SET name=:name , address=:address, active=:active, deactivationDate=:deactivationDate, upd_user=:upd_user WHERE id = :id", r)
+	s.log.Debug().Msg("updating product from base")
+	updateProduct(product, r)
 
-// 	if err != nil {
-// 		log.Error().Msg(err.Error())
-// 		return err
-// 	}
+	rs, err := sqlx.NamedExec(tx, "UPDATE inventory SET name=:name , price=:price, active=:active, image_url=:image_url WHERE id = :id", r)
 
-// 	fmt.Println(rs)
-// 	return nil
-// }
+	if err != nil {
+		return err
+	}
 
-// func (s *ProductService) Delete(ctx context.Context, tx *sqlx.Tx, id int) (err error) {
-// 	log.Info().Msg("Deleting record from Product")
+	fmt.Println(rs)
+	return nil
+}
 
-// 	rs := sqlx.MustExec(tx, "DELETE FROM Product WHERE id = ?", id)
+func (s *ProductService) Delete(ctx context.Context, tx *sqlx.Tx, id int) (err error) {
+	log.Info().Msg("Deleting record from inventory")
 
-// 	rows, err := rs.RowsAffected()
-// 	if rows == 0 {
+	rs := sqlx.MustExec(tx, "DELETE FROM inventory WHERE id = ?", id)
 
-// 		return errors.New("asdasd")
-// 	}
+	rows, err := rs.RowsAffected()
+	if rows == 0 {
 
-// 	if err != nil {
+		return errors.New("asdasd")
+	}
 
-// 		return err
-// 	}
+	if err != nil {
 
-// 	fmt.Println(rs)
-// 	return nil
-// }
+		return err
+	}
 
-// func (s *ProductService) FindAll(ctx context.Context) (c []*Product, err error) {
-// 	log.Info().Msg("Inserting record into Product")
+	fmt.Println(rs)
+	return nil
+}
 
-// 	people := []*Product{}
-// 	err = s.db.Select(&people, "SELECT * FROM Product where id > 1")
-// 	if err != nil {
-// 		log.Error().Msg(err.Error())
-// 		return nil, err
-// 	}
-// 	return people, nil
-// }
+func (s *ProductService) FindAll(ctx context.Context, clientId int) (c []*Product, err error) {
+	log.Info().Msg("Inserting record into Product")
 
-// func (s *ProductService) FindByID(ctx context.Context, id int) (c *Product, err error) {
-// 	log.Info().Msg("Getting Product by id")
+	people := []*Product{}
+	err = s.db.Select(&people, "SELECT * FROM inventory where id > 1 and client_id=?", clientId)
+	if err != nil {
+		log.Error().Msg(err.Error())
+		return nil, err
+	}
+	return people, nil
+}
 
-// 	people := Product{}
-// 	err = s.db.Get(&people, "SELECT * FROM Product where id=? LIMIT 1", id)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return &people, nil
-// }
+func (s *ProductService) FindByName(ctx context.Context, name string, clientId int) (c []Product, err error) {
+	log.Info().Msg("Getting Product by name")
+
+	products := []Product{}
+	err = s.db.Select(&products, "SELECT * FROM inventory where name like ? and client_id=?", "%"+name+"%", clientId)
+	if err != nil {
+		return nil, err
+	}
+	return products, nil
+}
+
+func (s *ProductService) FindByID(ctx context.Context, id int, clientID int) (c *Product, err error) {
+	log.Info().Msg("Getting Product by id")
+	return getProduct(s.log, s.db, id, clientID)
+}
+
+func getProduct(log zerolog.Logger, db sqlx.Ext, id int, clientID int) (c *Product, err error) {
+	log.Info().Msgf("Getting product id %d", clientID)
+
+	var product Product
+	err = sqlx.Get(db, &product, "select * from inventory where id = ? ", id)
+
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to get product")
+	}
+
+	return &product, nil
+}
+
+func updateProduct(baseProduct *Product, updatedProduct *Product) {
+
+	if updatedProduct.ImageUrl == "" {
+		updatedProduct.ImageUrl = baseProduct.ImageUrl
+	}
+
+	if updatedProduct.Price == "" {
+		updatedProduct.Price = baseProduct.Price
+	}
+}
