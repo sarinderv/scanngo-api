@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
 	"github.com/justinas/alice"
+	"github.com/rs/cors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/hlog"
 	"github.com/runntimeterror/scanngo-api/controllers"
@@ -23,9 +24,10 @@ type Server struct {
 
 func New(rtr *mux.Router, lgr zerolog.Logger, db *sqlx.DB) *Server {
 
+	handler := cors.Default().Handler(rtr)
 	driver := http.Server{
 		Addr:         "0.0.0.0:8080",
-		Handler:      rtr,
+		Handler:      handler,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
 		IdleTimeout:  120 * time.Second,

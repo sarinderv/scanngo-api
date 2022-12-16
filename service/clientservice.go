@@ -95,8 +95,6 @@ func (s *clientService) Delete(ctx context.Context, tx *sqlx.Tx, id int) (err er
 }
 
 func (s *clientService) FindAll(ctx context.Context) (c []*Client, err error) {
-	log.Info().Msg("Inserting record into client")
-
 	people := []*Client{}
 	err = s.db.Select(&people, "SELECT * FROM client where id > 1")
 	if err != nil {
